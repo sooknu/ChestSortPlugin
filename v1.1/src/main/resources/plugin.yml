@@ -1,0 +1,19 @@
+name: ChestSortPlugin
+version: 1.1
+main: sooknu.chestsort.ChestSortPlugin
+api-version: 1.21
+description: A simplified plugin to sort chests and inventories using shift+click.
+authors: [Sooknu]
+website: https://github.com/Sooknu/ChestSortPlugin
+
+commands:
+  chestsort:
+    description: Toggle shift+click sorting on or off
+    usage: /chestsort on|off
+    aliases: [cs, sort]
+    permission: chestsort.use
+
+permissions:
+  chestsort.use:
+    description: Allows the player to use the /chestsort command.
+    default: true
