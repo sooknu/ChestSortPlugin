@@ -9,8 +9,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -81,62 +79,38 @@ public class ChestSortPlugin extends JavaPlugin implements CommandExecutor, List
             Inventory clickedInventory = event.getClickedInventory();
 
             if (clickedInventory != null) {
-                if (clickedInventory.getType() == InventoryType.CHEST ||
-                    clickedInventory.getType() == InventoryType.BARREL ||
-                    clickedInventory.getType() == InventoryType.SHULKER_BOX) {
+                sortInventory(clickedInventory);
+                event.setCancelled(true);
+            }
+        }
+    }
 
-                    sortInventory(clickedInventory);
-                    event.setCancelled(true);
+    // =========================
+    // Sorting Logic for Inventories
+    // =========================
+    private void sortInventory(Inventory inventory) {
+        Map<String, ItemStack> itemMap = new LinkedHashMap<>();
 
-                } else if (clickedInventory.equals(player.getInventory())) {
-                    sortPlayerInventory(player.getInventory());
-                    event.setCancelled(true);
+        // Count total items, keeping metadata intact
+        for (ItemStack item : inventory.getContents()) {
+            if (item != null) {
+                String key = item.getType().toString() + ":" + item.getItemMeta().toString();
+                if (itemMap.containsKey(key)) {
+                    ItemStack existingItem = itemMap.get(key);
+                    int newAmount = existingItem.getAmount() + item.getAmount();
+                    existingItem.setAmount(Math.min(64, newAmount));
+                    if (newAmount > 64) {
+                        ItemStack extraStack = existingItem.clone();
+                        extraStack.setAmount(newAmount - 64);
+                        itemMap.put(key + UUID.randomUUID(), extraStack);  // Unique key for extra stacks
+                    }
+                } else {
+                    itemMap.put(key, item.clone());
                 }
             }
         }
-    }
 
-    // =========================
-    // Auto-Sorting on Chest Open
-    // =========================
-    @EventHandler
-    public void onInventoryOpen(InventoryOpenEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
-
-        Inventory openedInventory = event.getInventory();
-        if (openedInventory.getType() == InventoryType.CHEST ||
-            openedInventory.getType() == InventoryType.BARREL ||
-            openedInventory.getType() == InventoryType.SHULKER_BOX) {
-            sortInventory(openedInventory);
-        }
-    }
-
-    // =========================
-    // Sorting Logic for Chests
-    // =========================
-    private void sortInventory(Inventory inventory) {
-        Map<Material, Integer> materialCount = new HashMap<>();
-
-        // Count total items for each material
-        for (ItemStack item : inventory.getContents()) {
-            if (item != null) {
-                materialCount.put(item.getType(), materialCount.getOrDefault(item.getType(), 0) + item.getAmount());
-            }
-        }
-
-        List<ItemStack> sortedItems = new ArrayList<>();
-
-        // Stack items properly, splitting into multiple stacks if needed
-        for (Map.Entry<Material, Integer> entry : materialCount.entrySet()) {
-            Material material = entry.getKey();
-            int totalAmount = entry.getValue();
-
-            while (totalAmount > 0) {
-                int stackAmount = Math.min(64, totalAmount);
-                sortedItems.add(new ItemStack(material, stackAmount));
-                totalAmount -= stackAmount;
-            }
-        }
+        List<ItemStack> sortedItems = new ArrayList<>(itemMap.values());
 
         // Sort based on priority (Weapons, Tools, Armor, Blocks)
         sortedItems.sort(Comparator.comparingInt(this::getItemPriority).thenComparing(item -> item.getType().name()));
@@ -145,52 +119,6 @@ public class ChestSortPlugin extends JavaPlugin implements CommandExecutor, List
         for (ItemStack item : sortedItems) {
             inventory.addItem(item);
         }
-    }
-
-    // =========================
-    // Sorting Logic for Player Inventory
-    // =========================
-    private void sortPlayerInventory(Inventory inventory) {
-        ItemStack[] contents = inventory.getContents();
-        List<ItemStack> itemsToSort = new ArrayList<>();
-
-        // Skip hotbar (slots 0-8) and armor slots
-        for (int i = 9; i < 36; i++) {
-            if (contents[i] != null && !isArmor(contents[i])) {
-                itemsToSort.add(contents[i]);
-                contents[i] = null;
-            }
-        }
-
-        Map<Material, Integer> materialCount = new HashMap<>();
-
-        // Count total items for each material
-        for (ItemStack item : itemsToSort) {
-            materialCount.put(item.getType(), materialCount.getOrDefault(item.getType(), 0) + item.getAmount());
-        }
-
-        List<ItemStack> sortedItems = new ArrayList<>();
-
-        // Stack items properly, splitting into multiple stacks if needed
-        for (Map.Entry<Material, Integer> entry : materialCount.entrySet()) {
-            Material material = entry.getKey();
-            int totalAmount = entry.getValue();
-
-            while (totalAmount > 0) {
-                int stackAmount = Math.min(64, totalAmount);
-                sortedItems.add(new ItemStack(material, stackAmount));
-                totalAmount -= stackAmount;
-            }
-        }
-
-        sortedItems.sort(Comparator.comparingInt(this::getItemPriority).thenComparing(item -> item.getType().name()));
-
-        int index = 9;  // Start after hotbar
-        for (ItemStack item : sortedItems) {
-            contents[index++] = item;
-        }
-
-        inventory.setContents(contents);
     }
 
     // =========================
