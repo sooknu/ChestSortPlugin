@@ -1,0 +1,40 @@
+use-permissions: true
+
+hotkeys:
+  double_click_delay_ticks: 6  # Delay in ticks (~300 ms)
+
+defaults:
+  shift_click_sort_enabled: true
+  auto_container_sort_enabled: false
+  left_click_outside_to_container: false
+  right_click_outside_to_inventory: false
+  double_left_click_outside: false
+  double_right_click_outside: false
+
+messages:
+  enabled: false
+  sort_complete: "&aSorted inventory!"
+  transfer_matching_to_container: "&aTransferred matching items to chest."
+  transfer_matching_to_inventory: "&aTransferred matching items from chest to inventory."
+  transfer_all_to_container: "&aTransferred ALL items from inventory into container."
+  transfer_all_to_inventory: "&aTransferred ALL items from chest into inventory."
+  auto_container_sort: "&aContainer automatically sorted."
+  usage_reminder: "&eUse /chestsort for plugin settings."
+
+sound-on-sort: true
+sort-sound: UI_BUTTON_CLICK
+sort-sound-volume: 1.0
+sort-sound-pitch: 1.0
+
+gui-toggle-sound-enabled: true
+gui-toggle-sound: ITEM_ARMOR_EQUIP_CHAIN
+gui-toggle-sound-volume: 1.0
+gui-toggle-sound-pitch: 1.0
+
+# Sorting order configurable.
+sorting_order:
+  - WEAPONS
+  - TOOLS
+  - ARMOR
+  - OTHERS
+  - BLOCKS

@@ -1,0 +1,26 @@
+name: ChestSortPlugin
+version: ${version}
+main: sooknu.chestsort.ChestSortPlugin
+api-version: 1.21
+commands:
+  chestsort:
+    description: Manage chest/container sorting settings.
+    usage: /chestsort [on|off|toggle|hotkeys|reload|help]
+    aliases: [sort]
+  invsort:
+    description: Manually sort your inventory.
+    usage: /invsort [hotbar|all|toggle|on|off|help]
+    aliases: [isort]
+permissions:
+  chestsort.use:
+    description: Allows usage of automatic chest/container sorting and /chestsort.
+    default: op
+  chestsort.use.inventory:
+    description: Allows usage of automatic inventory sorting and /invsort.
+    default: op
+  chestsort.reload:
+    description: Allows reloading the plugin config.
+    default: op
+  chestsort.hotkeys:
+    description: Allows using/configuring sorting hotkeys.
+    default: op
