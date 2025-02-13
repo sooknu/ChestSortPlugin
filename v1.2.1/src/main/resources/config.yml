@@ -1,3 +1,5 @@
+# Config for ChestSortPlugin v1.2.1
+
 use-permissions: true
 
 hotkeys:
@@ -31,10 +33,32 @@ gui-toggle-sound: ITEM_ARMOR_EQUIP_CHAIN
 gui-toggle-sound-volume: 1.0
 gui-toggle-sound-pitch: 1.0
 
-# Sorting order configurable.
 sorting_order:
   - WEAPONS
   - TOOLS
   - ARMOR
   - OTHERS
   - BLOCKS
+
+# List of inventory types that the sorting logic take effect on.
+sorting_enabled:
+  CHEST: true
+  BARREL: true
+  ENDER_CHEST: true
+  SHULKER_BOX: true
+  HOPPER: false
+  BREWING: false
+  FURNACE: false
+  SMOKER: false
+  BLAST_FURNACE: false
+  DISPENSER: false
+  DROPPER: false
+  WORKBENCH: false
+  CHEST_MINECART: false
+  ANVIL: false
+  MERCHANT: false
+  SMITHING_TABLE: false
+  GRINDSTONE: false
+  LOOM: false
+  LECTERN: false
+  FLETCHING_TABLE: false

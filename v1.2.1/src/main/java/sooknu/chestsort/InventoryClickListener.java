@@ -32,6 +32,14 @@ public class InventoryClickListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
+        // Allow vanilla drop behavior for drop and control-drop clicks in player inventory.
+        if (event.getClickedInventory() != null 
+                && event.getClickedInventory().equals(((Player) event.getWhoClicked()).getInventory())) {
+            if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+                return;
+            }
+        }
+        
         // Cancel processing if the settings GUI is open.
         if (event.getView() != null && event.getView().getTitle().equals(SettingsGUI.GUI_TITLE)) {
             event.setCancelled(true);
@@ -41,13 +49,17 @@ public class InventoryClickListener implements Listener {
         // Core shift-click sorting.
         if (event.isShiftClick()) {
             ItemStack currentItem = event.getCurrentItem();
-            if (currentItem != null && currentItem.getType() != Material.AIR) return;
-            if (!(event.getWhoClicked() instanceof Player)) return;
+            if (currentItem != null && currentItem.getType() != Material.AIR)
+                return;
+            if (!(event.getWhoClicked() instanceof Player))
+                return;
             Player player = (Player) event.getWhoClicked();
-            if (!PlayerSettings.get(player.getUniqueId()).isShiftClickSortEnabled()) return;
+            if (!PlayerSettings.get(player.getUniqueId()).isShiftClickSortEnabled())
+                return;
             event.setCancelled(true);
             Inventory inv = event.getClickedInventory();
-            if (inv == null) return;
+            if (inv == null)
+                return;
             if (inv.equals(player.getInventory())) {
                 InventorySorter.sortPlayerInventory(player);
             } else {
@@ -73,73 +85,85 @@ public class InventoryClickListener implements Listener {
             return;
         }
         
+        // Debug Section: Uncomment for debugging outside click details.
+        /*
+        if (event.getRawSlot() == -999) {
+            Player player = (Player) event.getWhoClicked();
+            Inventory topInv = event.getView().getTopInventory();
+            plugin.getLogger().info("DEBUG: Outside click: type=" + event.getClick() + ", inventoryType=" + topInv.getType().toString());
+        }
+        */
+        
         // Handle outside clicks (raw slot == -999).
         if (event.getRawSlot() == -999) {
-            if (!(event.getWhoClicked() instanceof Player)) return;
+            if (!(event.getWhoClicked() instanceof Player))
+                return;
             final Player player = (Player) event.getWhoClicked();
             final Inventory topInv = event.getView().getTopInventory();
+            // If the top inventory is the player's own inventory (type CRAFTING), let vanilla behavior occur.
+            if (topInv.getType().toString().equals("CRAFTING")) {
+                return;
+            }
             final PlayerSettings ps = PlayerSettings.get(player.getUniqueId());
             
-            if (!topInv.equals(player.getInventory())) {
-                // Handle LEFT clicks outside with scheduling.
-                if (event.getClick() == ClickType.LEFT) {
-                    event.setCancelled(true);
-                    final String uuid = player.getUniqueId().toString();
-                    if (leftClickTaskMap.containsKey(uuid)) {
-                        leftClickTaskMap.get(uuid).cancel();
+            // Handle LEFT clicks outside with scheduling.
+            if (event.getClick() == ClickType.LEFT) {
+                event.setCancelled(true);
+                final String uuid = player.getUniqueId().toString();
+                if (leftClickTaskMap.containsKey(uuid)) {
+                    leftClickTaskMap.get(uuid).cancel();
+                    leftClickTaskMap.remove(uuid);
+                    if (ps.isDoubleLeftClickOutside()) {
+                        InventorySorter.transferAllToContainer(topInv, player);
+                        String msg = ChatColor.translateAlternateColorCodes('&', 
+                                plugin.getConfig().getString("messages.transfer_all_to_container", "&aTransferred ALL items from inventory into container."));
+                        if (plugin.getConfig().getBoolean("messages.enabled", true)) {
+                            player.sendMessage(ChatColor.GREEN + msg);
+                        }
+                    }
+                } else {
+                    BukkitTask task = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                        if (ps.isLeftClickOutsideToContainer()) {
+                            InventorySorter.transferMatchingToContainer(topInv, player);
+                            String msg = ChatColor.translateAlternateColorCodes('&', 
+                                plugin.getConfig().getString("messages.transfer_matching_to_container", "&aTransferred matching items to chest."));
+                            if (plugin.getConfig().getBoolean("messages.enabled", true)) {
+                                player.sendMessage(ChatColor.GREEN + msg);
+                            }
+                        }
                         leftClickTaskMap.remove(uuid);
-                        if (ps.isDoubleLeftClickOutside()) {
-                            InventorySorter.transferAllToContainer(topInv, player);
-                            String msg = ChatColor.translateAlternateColorCodes('&', 
-                                    plugin.getConfig().getString("messages.transfer_all_to_container", "&aTransferred ALL items from inventory into container."));
-                            if (plugin.getConfig().getBoolean("messages.enabled", true)) {
-                                player.sendMessage(ChatColor.GREEN + msg);
-                            }
-                        }
-                    } else {
-                        BukkitTask task = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                            if (ps.isLeftClickOutsideToContainer()) {
-                                InventorySorter.transferMatchingToContainer(topInv, player);
-                                String msg = ChatColor.translateAlternateColorCodes('&', 
-                                    plugin.getConfig().getString("messages.transfer_matching_to_container", "&aTransferred matching items to chest."));
-                                if (plugin.getConfig().getBoolean("messages.enabled", true)) {
-                                    player.sendMessage(ChatColor.GREEN + msg);
-                                }
-                            }
-                            leftClickTaskMap.remove(uuid);
-                        }, DOUBLE_CLICK_DELAY_TICKS);
-                        leftClickTaskMap.put(uuid, task);
-                    }
+                    }, DOUBLE_CLICK_DELAY_TICKS);
+                    leftClickTaskMap.put(uuid, task);
                 }
-                // Handle RIGHT clicks outside with scheduling.
-                else if (event.getClick() == ClickType.RIGHT) {
-                    event.setCancelled(true);
-                    final String uuid = player.getUniqueId().toString();
-                    if (rightClickTaskMap.containsKey(uuid)) {
-                        rightClickTaskMap.get(uuid).cancel();
-                        rightClickTaskMap.remove(uuid);
-                        if (ps.isDoubleRightClickOutside()) {
-                            InventorySorter.transferAllToInventory(topInv, player);
+            }
+            // Handle RIGHT clicks outside with scheduling.
+            else if (event.getClick() == ClickType.RIGHT) {
+                event.setCancelled(true);
+                final String uuid = player.getUniqueId().toString();
+                if (rightClickTaskMap.containsKey(uuid)) {
+                    rightClickTaskMap.get(uuid).cancel();
+                    rightClickTaskMap.remove(uuid);
+                    if (ps.isDoubleRightClickOutside()) {
+                        InventorySorter.transferAllToInventory(topInv, player);
+                        String msg = ChatColor.translateAlternateColorCodes('&', 
+                                plugin.getConfig().getString("messages.transfer_all_to_inventory", "&aTransferred ALL items from chest into inventory."));
+                        if (plugin.getConfig().getBoolean("messages.enabled", true)) {
+                            player.sendMessage(ChatColor.GREEN + msg);
+                        }
+                    }
+                } else {
+                    BukkitTask task = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                        if (ps.isRightClickOutsideToInventory()) {
+                            InventorySorter.transferMatchingToInventory(topInv, player);
                             String msg = ChatColor.translateAlternateColorCodes('&', 
-                                    plugin.getConfig().getString("messages.transfer_all_to_inventory", "&aTransferred ALL items from chest into inventory."));
+                                plugin.getConfig().getString("messages.transfer_matching_to_inventory", "&aTransferred matching items from chest to inventory."));
                             if (plugin.getConfig().getBoolean("messages.enabled", true)) {
                                 player.sendMessage(ChatColor.GREEN + msg);
                             }
                         }
-                    } else {
-                        BukkitTask task = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                            if (ps.isRightClickOutsideToInventory()) {
-                                InventorySorter.transferMatchingToInventory(topInv, player);
-                                String msg = ChatColor.translateAlternateColorCodes('&', 
-                                    plugin.getConfig().getString("messages.transfer_matching_to_inventory", "&aTransferred matching items from chest to inventory."));
-                                if (plugin.getConfig().getBoolean("messages.enabled", true)) {
-                                    player.sendMessage(ChatColor.GREEN + msg);
-                                }
-                            }
-                            rightClickTaskMap.remove(uuid);
-                        }, DOUBLE_CLICK_DELAY_TICKS);
-                        rightClickTaskMap.put(uuid, task);
-                    }
+                        rightClickTaskMap.remove(uuid);
+                    }, DOUBLE_CLICK_DELAY_TICKS);
+                    rightClickTaskMap.put(uuid, task);
                 }
             }
             return;

@@ -5,6 +5,8 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.event.inventory.InventoryType;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,13 @@ public class InventorySorter {
     // Sorts a generic inventory (for containers).
     public static void sortInventory(Inventory inv) {
         if (inv == null) return;
+        
+        // Check if sorting is enabled for this inventory type (using the config).
+        // The default is true if not specified.
+        if (!ChestSortPlugin.getInstance().getConfig().getBoolean("sorting_enabled." + inv.getType().toString(), true)) {
+            return;
+        }
+        
         List<Integer> allowedSlots = new ArrayList<>();
         for (int i = 0; i < inv.getSize(); i++) {
             allowedSlots.add(i);
